@@ -7,17 +7,20 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
-from flask_gravatar import Gravatar
 from functools import wraps
+from dotenv import load_dotenv
+import os
 
-# ------------------- CONFIG -------------------
+# ------------------- LOAD ENV -------------------
+load_dotenv()
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
 # Connect to DB
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///blog.db")
 db = SQLAlchemy()
 db.init_app(app)
 
@@ -25,9 +28,9 @@ db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-# Admin Email
-ADMIN_EMAIL = "thallapallijashwanth@gmail.com"
-
+# Admin credentials from env
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 # ------------------- MODELS -------------------
 class BlogPost(db.Model):
@@ -70,6 +73,14 @@ class Comment(db.Model):
 
 with app.app_context():
     db.create_all()
+
+    # Auto-create admin if not exists
+    if not User.query.filter_by(email=ADMIN_EMAIL).first():
+        hashed_password = generate_password_hash(ADMIN_PASSWORD, method="pbkdf2:sha256", salt_length=8)
+        admin_user = User(email=ADMIN_EMAIL, name="Admin", password=hashed_password)
+        db.session.add(admin_user)
+        db.session.commit()
+        print(f"✅ Admin account created: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
 
 
 # ------------------- LOGIN MANAGER -------------------
