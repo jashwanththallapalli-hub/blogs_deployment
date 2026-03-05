@@ -1,0 +1,29 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git 'https://github.com/jashwanththallapalli-hub/blogs_deployment.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Building application..."
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo "Running tests..."
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Deploying application..."
+            }
+        }
+    }
+}
