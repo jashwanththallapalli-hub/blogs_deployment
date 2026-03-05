@@ -1,28 +1,40 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "jashwanth239/blogs-app"
+        EC2_IP = "44.221.50.70"
+    }
+
     stages {
-        stage('Clone Repository') {
+
+        stage('Build Docker Image') {
             steps {
-                git branch: 'main', url: 'https://github.com/jashwanththallapalli-hub/blogs_deployment.git'
+                sh 'docker build -t $IMAGE_NAME .'
             }
         }
 
-        stage('Build') {
+        stage('Push Docker Image') {
             steps {
-                echo "Building application..."
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh 'docker login -u $USER -p $PASS'
+                    sh 'docker push $IMAGE_NAME'
+                }
             }
         }
 
-        stage('Test') {
+        stage('Deploy to EC2') {
             steps {
-                echo "Running tests..."
-            }
-        }
+                sh '''
+                ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/samplekey.pem ubuntu@$EC2_IP << EOF
 
-        stage('Deploy') {
-            steps {
-                echo "Deploying application..."
+                docker pull $IMAGE_NAME
+                docker stop blogs-container || true
+                docker rm blogs-container || true
+                docker run -d -p 5000:5000 --name blogs-container $IMAGE_NAME
+
+                EOF
+                '''
             }
         }
     }
